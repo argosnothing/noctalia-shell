@@ -118,6 +118,7 @@ Rectangle {
   function checkCollision() {
     if (!showTitles || isVerticalBar || section !== "left") {
       hiddenTitleIndices = {};
+      hiddenTitleRevision++;
       return;
     }
 
@@ -128,12 +129,13 @@ Rectangle {
       collisionBoundary = rightSectionX - Style.marginS;
     } else {
       hiddenTitleIndices = {};
+      hiddenTitleRevision++;
       return;
     }
 
     var newHidden = {};
     var totalWindows = CompositorService.windows.count || 0;
-    var testWidth = taskbarLayout.x + Style.marginM;
+    var testWidth = root.x + taskbarLayout.x + Style.marginM;
     
     for (var i = 0; i < totalWindows; i++) {
       var w = CompositorService.windows.get(i);
@@ -145,7 +147,8 @@ Rectangle {
       if (!passOutput || !passWorkspace) continue;
       
       var isHidden = newHidden[i] === true;
-      var itemWidth = (!isHidden) ? 200 : root.itemSize;
+      var titleWidth = 150;
+      var itemWidth = (!isHidden) ? (root.itemSize + titleWidth) : root.itemSize;
       
       if (testWidth + itemWidth > collisionBoundary) {
         newHidden[i] = true;
@@ -154,7 +157,7 @@ Rectangle {
         testWidth += itemWidth;
       }
       
-      testWidth += taskbarLayout.spacing;
+      testWidth += Style.marginXXS;
     }
 
     hiddenTitleIndices = newHidden;
