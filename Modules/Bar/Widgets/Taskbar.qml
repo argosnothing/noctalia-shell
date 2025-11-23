@@ -140,8 +140,9 @@ Rectangle {
   Flow {
     id: taskbarLayout
     visible: showTitles
-    x: isVerticalBar ? 0 : Style.marginM
-    y: (density === "compact") ? 0 : isVerticalBar ? Style.marginM : 0
+    anchors.verticalCenter: parent.verticalCenter
+    anchors.left: parent.left
+    anchors.leftMargin: isVerticalBar ? 0 : Style.marginM
 
     spacing: Style.marginXXS
     flow: isVerticalBar ? Flow.TopToBottom : Flow.LeftToRight
