@@ -39,6 +39,7 @@ Rectangle {
   readonly property string hideMode: (widgetSettings.hideMode !== undefined) ? widgetSettings.hideMode : widgetMetadata.hideMode
   readonly property bool onlySameOutput: (widgetSettings.onlySameOutput !== undefined) ? widgetSettings.onlySameOutput : widgetMetadata.onlySameOutput
   readonly property bool onlyActiveWorkspaces: (widgetSettings.onlyActiveWorkspaces !== undefined) ? widgetSettings.onlyActiveWorkspaces : widgetMetadata.onlyActiveWorkspaces
+  readonly property bool showTitles: (widgetSettings.showTitles !== undefined) ? widgetSettings.showTitles : widgetMetadata.showTitles
 
   // Context menu state
   property var selectedWindow: null
@@ -164,38 +165,64 @@ Rectangle {
           return ws.id;
         }).includes(modelData.workspaceId))
 
-        Layout.preferredWidth: root.itemSize
+        Layout.preferredWidth: showTitles && !isVerticalBar ? contentLayout.implicitWidth : root.itemSize
         Layout.preferredHeight: root.itemSize
         Layout.alignment: Qt.AlignCenter
 
-        IconImage {
-          id: appIcon
-          width: parent.width
-          height: parent.height
-          source: ThemeIcons.iconForAppId(taskbarItem.modelData.appId)
-          smooth: true
-          asynchronous: true
-          opacity: modelData.isFocused ? Style.opacityFull : 0.6
+        Behavior on Layout.preferredWidth {
+          NumberAnimation {
+            duration: Style.animationNormal
+            easing.type: Easing.OutCubic
+          }
+        }
 
-          // Apply dock shader to all taskbar icons
-          layer.enabled: widgetSettings.colorizeIcons !== false
-          layer.effect: ShaderEffect {
-            property color targetColor: Settings.data.colorSchemes.darkMode ? Color.mOnSurface : Color.mSurfaceVariant
-            property real colorizeMode: 0.0 // Dock mode (grayscale)
+        RowLayout {
+          id: contentLayout
+          anchors.fill: parent
+          spacing: Style.marginXXS
 
-            fragmentShader: Qt.resolvedUrl(Quickshell.shellDir + "/Shaders/qsb/appicon_colorize.frag.qsb")
+          IconImage {
+            id: appIcon
+            Layout.preferredWidth: root.itemSize
+            Layout.preferredHeight: root.itemSize
+            source: ThemeIcons.iconForAppId(taskbarItem.modelData.appId)
+            smooth: true
+            asynchronous: true
+            opacity: modelData.isFocused ? Style.opacityFull : 0.6
+
+            // Apply dock shader to all taskbar icons
+            layer.enabled: widgetSettings.colorizeIcons !== false
+            layer.effect: ShaderEffect {
+              property color targetColor: Settings.data.colorSchemes.darkMode ? Color.mOnSurface : Color.mSurfaceVariant
+              property real colorizeMode: 0.0 // Dock mode (grayscale)
+
+              fragmentShader: Qt.resolvedUrl(Quickshell.shellDir + "/Shaders/qsb/appicon_colorize.frag.qsb")
+            }
           }
 
-          Rectangle {
-            id: iconBackground
-            anchors.bottomMargin: -2
-            anchors.bottom: parent.bottom
-            anchors.horizontalCenter: parent.horizontalCenter
-            width: 4
-            height: 4
-            color: modelData.isFocused ? Color.mPrimary : Color.transparent
-            radius: width * 0.5
+          NText {
+            id: titleText
+            visible: showTitles && !isVerticalBar
+            Layout.fillWidth: true
+            text: CompositorService.getCleanAppName(taskbarItem.modelData.appId, taskbarItem.modelData.title)
+            pointSize: Style.fontSizeS
+            applyUiScale: false
+            font.weight: Style.fontWeightMedium
+            color: Color.mOnSurface
+            opacity: modelData.isFocused ? Style.opacityFull : 0.6
           }
+        }
+
+        Rectangle {
+          id: iconBackground
+          anchors.bottomMargin: -2
+          anchors.bottom: parent.bottom
+          anchors.left: parent.left
+          anchors.leftMargin: (root.itemSize - width) / 2
+          width: 4
+          height: 4
+          color: modelData.isFocused ? Color.mPrimary : Color.transparent
+          radius: width * 0.5
         }
 
         MouseArea {

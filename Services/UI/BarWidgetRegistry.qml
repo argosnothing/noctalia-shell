@@ -196,7 +196,8 @@ Singleton {
                                     "onlySameOutput": true,
                                     "onlyActiveWorkspaces": true,
                                     "hideMode": "hidden",
-                                    "colorizeIcons": false
+                                    "colorizeIcons": false,
+                                    "showTitles": false
                                   },
                                   "TaskbarGrouped": {
                                     "allowUserSettings": true,

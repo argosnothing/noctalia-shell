@@ -17,6 +17,7 @@ ColumnLayout {
   property bool valueOnlyActiveWorkspaces: widgetData.onlyActiveWorkspaces !== undefined ? widgetData.onlyActiveWorkspaces : widgetMetadata.onlyActiveWorkspaces
   property bool valueOnlySameOutput: widgetData.onlySameOutput !== undefined ? widgetData.onlySameOutput : widgetMetadata.onlySameOutput
   property bool valueColorizeIcons: widgetData.colorizeIcons !== undefined ? widgetData.colorizeIcons : widgetMetadata.colorizeIcons
+  property bool valueShowTitles: widgetData.showTitles !== undefined ? widgetData.showTitles : widgetMetadata.showTitles
 
   Component.onCompleted: {
     if (widgetData && widgetData.hideMode !== undefined) {
@@ -32,6 +33,7 @@ ColumnLayout {
     settings.onlySameOutput = valueOnlySameOutput;
     settings.onlyActiveWorkspaces = valueOnlyActiveWorkspaces;
     settings.colorizeIcons = valueColorizeIcons;
+    settings.showTitles = valueShowTitles;
     return settings;
   }
 
@@ -79,5 +81,13 @@ ColumnLayout {
     description: I18n.tr("bar.widget-settings.taskbar.colorize-icons.description")
     checked: root.valueColorizeIcons
     onToggled: checked => root.valueColorizeIcons = checked
+  }
+
+  NToggle {
+    Layout.fillWidth: true
+    label: I18n.tr("bar.widget-settings.taskbar.show-titles.label")
+    description: I18n.tr("bar.widget-settings.taskbar.show-titles.description")
+    checked: root.valueShowTitles
+    onToggled: checked => root.valueShowTitles = checked
   }
 }

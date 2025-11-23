@@ -340,6 +340,10 @@
         "only-same-output": {
           "description": "Show only apps from the output where the bar is located.",
           "label": "Only from same output"
+        },
+        "show-titles": {
+          "description": "Display application titles next to icons in the taskbar.",
+          "label": "Show application titles"
         }
       },
       "taskbar-grouped": {
