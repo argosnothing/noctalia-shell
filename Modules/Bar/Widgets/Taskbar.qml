@@ -142,8 +142,6 @@ Rectangle {
     visible: showTitles
     x: isVerticalBar ? 0 : Style.marginM
     y: (density === "compact") ? 0 : isVerticalBar ? Style.marginM : 0
-    width: parent.width - (isVerticalBar ? 0 : Style.marginM * 2)
-    height: parent.height - ((density === "compact") ? 0 : isVerticalBar ? Style.marginM * 2 : 0)
 
     spacing: Style.marginXXS
     flow: isVerticalBar ? Flow.TopToBottom : Flow.LeftToRight
@@ -215,8 +213,7 @@ Rectangle {
           id: iconBackground
           anchors.bottomMargin: -2
           anchors.bottom: parent.bottom
-          anchors.left: parent.left
-          anchors.leftMargin: Style.marginS + (root.itemSize - Style.marginS * 2 - width) / 2
+          anchors.horizontalCenter: parent.horizontalCenter
           width: 4
           height: 4
           color: modelData.isFocused ? Color.mPrimary : Color.transparent
