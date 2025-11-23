@@ -159,7 +159,7 @@ Rectangle {
         }).includes(modelData.workspaceId))
 
         width: showTitles && !isVerticalBar ? contentLayout.implicitWidth + Style.marginS * 2 : root.itemSize
-        height: root.itemSize
+        height: Style.capsuleHeight
 
         radius: Style.radiusM
         color: Style.capsuleColor
