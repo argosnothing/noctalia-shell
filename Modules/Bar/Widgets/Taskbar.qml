@@ -45,6 +45,7 @@ Rectangle {
   property real centerSectionWidth: 0
   property real rightSectionX: 0
   property var hiddenTitleIndices: ({})
+  property int hiddenTitleRevision: 0
 
   // Context menu state
   property var selectedWindow: null
@@ -157,6 +158,7 @@ Rectangle {
     }
 
     hiddenTitleIndices = newHidden;
+    hiddenTitleRevision++;
   }
 
   Connections {
@@ -222,7 +224,10 @@ Rectangle {
         required property var modelData
         required property int index
         property ShellScreen screen: root.screen
-        property bool shouldShowTitle: showTitles && !isVerticalBar && !root.hiddenTitleIndices[index]
+        property bool shouldShowTitle: {
+          root.hiddenTitleRevision;
+          return showTitles && !isVerticalBar && !root.hiddenTitleIndices[index];
+        }
 
         visible: (!onlySameOutput || modelData.output == screen.name) && (!onlyActiveWorkspaces || CompositorService.getActiveWorkspaces().map(function (ws) {
           return ws.id;
