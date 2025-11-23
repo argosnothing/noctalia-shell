@@ -211,6 +211,7 @@ Rectangle {
 
         Rectangle {
           id: iconBackground
+          visible: !showTitles
           anchors.bottomMargin: -2
           anchors.bottom: parent.bottom
           anchors.horizontalCenter: parent.horizontalCenter
