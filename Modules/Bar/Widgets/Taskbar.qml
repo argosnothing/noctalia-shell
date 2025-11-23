@@ -134,11 +134,12 @@ Rectangle {
 
   implicitWidth: visible ? (isVerticalBar ? Style.capsuleHeight : Math.round(taskbarLayout.implicitWidth + Style.marginM * 2)) : 0
   implicitHeight: visible ? (isVerticalBar ? Math.round(taskbarLayout.implicitHeight + Style.marginM * 2) : Style.capsuleHeight) : 0
-  radius: Style.radiusM
-  color: Style.capsuleColor
+  radius: showTitles ? 0 : Style.radiusM
+  color: showTitles ? Color.transparent : Style.capsuleColor
 
-  GridLayout {
+  Flow {
     id: taskbarLayout
+    visible: showTitles
     anchors.fill: parent
     anchors {
       leftMargin: isVerticalBar ? undefined : Style.marginM
@@ -147,16 +148,12 @@ Rectangle {
       bottomMargin: (density === "compact") ? 0 : isVerticalBar ? Style.marginM : undefined
     }
 
-    // Configure GridLayout to behave like RowLayout or ColumnLayout
-    rows: isVerticalBar ? -1 : 1 // -1 means unlimited
-    columns: isVerticalBar ? 1 : -1 // -1 means unlimited
-
-    rowSpacing: isVerticalBar ? Style.marginXXS : 0
-    columnSpacing: isVerticalBar ? 0 : Style.marginXXS
+    spacing: Style.marginXXS
+    flow: isVerticalBar ? Flow.TopToBottom : Flow.LeftToRight
 
     Repeater {
       model: CompositorService.windows
-      delegate: Item {
+      delegate: Rectangle {
         id: taskbarItem
         required property var modelData
         property ShellScreen screen: root.screen
@@ -165,11 +162,13 @@ Rectangle {
           return ws.id;
         }).includes(modelData.workspaceId))
 
-        Layout.preferredWidth: showTitles && !isVerticalBar ? contentLayout.implicitWidth : root.itemSize
-        Layout.preferredHeight: root.itemSize
-        Layout.alignment: Qt.AlignCenter
+        width: showTitles && !isVerticalBar ? contentLayout.implicitWidth + Style.marginS * 2 : root.itemSize
+        height: root.itemSize
 
-        Behavior on Layout.preferredWidth {
+        radius: Style.radiusM
+        color: Style.capsuleColor
+
+        Behavior on width {
           NumberAnimation {
             duration: Style.animationNormal
             easing.type: Easing.OutCubic
@@ -179,12 +178,14 @@ Rectangle {
         RowLayout {
           id: contentLayout
           anchors.fill: parent
+          anchors.leftMargin: Style.marginS
+          anchors.rightMargin: Style.marginS
           spacing: Style.marginXXS
 
           IconImage {
             id: appIcon
-            Layout.preferredWidth: root.itemSize
-            Layout.preferredHeight: root.itemSize
+            Layout.preferredWidth: root.itemSize - Style.marginS * 2
+            Layout.preferredHeight: root.itemSize - Style.marginS * 2
             source: ThemeIcons.iconForAppId(taskbarItem.modelData.appId)
             smooth: true
             asynchronous: true
@@ -204,7 +205,7 @@ Rectangle {
             id: titleText
             visible: showTitles && !isVerticalBar
             Layout.fillWidth: true
-            text: CompositorService.getCleanAppName(taskbarItem.modelData.appId, taskbarItem.modelData.title)
+            text: taskbarItem.modelData.title || taskbarItem.modelData.appId || "Unknown"
             pointSize: Style.fontSizeS
             applyUiScale: false
             font.weight: Style.fontWeightMedium
@@ -218,7 +219,7 @@ Rectangle {
           anchors.bottomMargin: -2
           anchors.bottom: parent.bottom
           anchors.left: parent.left
-          anchors.leftMargin: (root.itemSize - width) / 2
+          anchors.leftMargin: Style.marginS + (root.itemSize - Style.marginS * 2 - width) / 2
           width: 4
           height: 4
           color: modelData.isFocused ? Color.mPrimary : Color.transparent
@@ -253,6 +254,102 @@ Rectangle {
             }
           }
           onEntered: TooltipService.show(taskbarItem, taskbarItem.modelData.title || taskbarItem.modelData.appId || "Unknown app.", BarService.getTooltipDirection())
+          onExited: TooltipService.hide()
+        }
+      }
+    }
+  }
+
+  GridLayout {
+    id: taskbarLayoutGrid
+    visible: !showTitles
+    anchors.fill: parent
+    anchors {
+      leftMargin: isVerticalBar ? undefined : Style.marginM
+      rightMargin: isVerticalBar ? undefined : Style.marginM
+      topMargin: (density === "compact") ? 0 : isVerticalBar ? Style.marginM : undefined
+      bottomMargin: (density === "compact") ? 0 : isVerticalBar ? Style.marginM : undefined
+    }
+
+    rows: isVerticalBar ? -1 : 1
+    columns: isVerticalBar ? 1 : -1
+
+    rowSpacing: isVerticalBar ? Style.marginXXS : 0
+    columnSpacing: isVerticalBar ? 0 : Style.marginXXS
+
+    Repeater {
+      model: CompositorService.windows
+      delegate: Item {
+        id: taskbarItemGrid
+        required property var modelData
+        property ShellScreen screen: root.screen
+
+        visible: (!onlySameOutput || modelData.output == screen.name) && (!onlyActiveWorkspaces || CompositorService.getActiveWorkspaces().map(function (ws) {
+          return ws.id;
+        }).includes(modelData.workspaceId))
+
+        Layout.preferredWidth: root.itemSize
+        Layout.preferredHeight: root.itemSize
+        Layout.alignment: Qt.AlignCenter
+
+        IconImage {
+          id: appIcon
+          width: parent.width
+          height: parent.height
+          source: ThemeIcons.iconForAppId(taskbarItemGrid.modelData.appId)
+          smooth: true
+          asynchronous: true
+          opacity: modelData.isFocused ? Style.opacityFull : 0.6
+
+          // Apply dock shader to all taskbar icons
+          layer.enabled: widgetSettings.colorizeIcons !== false
+          layer.effect: ShaderEffect {
+            property color targetColor: Settings.data.colorSchemes.darkMode ? Color.mOnSurface : Color.mSurfaceVariant
+            property real colorizeMode: 0.0 // Dock mode (grayscale)
+
+            fragmentShader: Qt.resolvedUrl(Quickshell.shellDir + "/Shaders/qsb/appicon_colorize.frag.qsb")
+          }
+
+          Rectangle {
+            id: iconBackground
+            anchors.bottomMargin: -2
+            anchors.bottom: parent.bottom
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: 4
+            height: 4
+            color: modelData.isFocused ? Color.mPrimary : Color.transparent
+            radius: width * 0.5
+          }
+        }
+
+        MouseArea {
+          anchors.fill: parent
+          hoverEnabled: true
+          cursorShape: Qt.PointingHandCursor
+          acceptedButtons: Qt.LeftButton | Qt.RightButton
+
+          onPressed: function (mouse) {
+            if (!taskbarItemGrid.modelData)
+              return;
+            if (mouse.button === Qt.LeftButton) {
+              try {
+                CompositorService.focusWindow(taskbarItemGrid.modelData);
+              } catch (error) {
+                Logger.e("Taskbar", "Failed to activate toplevel: " + error);
+              }
+            } else if (mouse.button === Qt.RightButton) {
+              TooltipService.hide();
+              root.selectedWindow = taskbarItemGrid.modelData;
+              root.selectedAppName = CompositorService.getCleanAppName(taskbarItemGrid.modelData.appId, taskbarItemGrid.modelData.title);
+              var popupMenuWindow = PanelService.getPopupMenuWindow(screen);
+              if (popupMenuWindow) {
+                const pos = BarService.getContextMenuPosition(taskbarItemGrid, contextMenu.implicitWidth, contextMenu.implicitHeight);
+                contextMenu.openAtItem(taskbarItemGrid, pos.x, pos.y);
+                popupMenuWindow.showContextMenu(contextMenu);
+              }
+            }
+          }
+          onEntered: TooltipService.show(taskbarItemGrid, taskbarItemGrid.modelData.title || taskbarItemGrid.modelData.appId || "Unknown app.", BarService.getTooltipDirection())
           onExited: TooltipService.hide()
         }
       }
