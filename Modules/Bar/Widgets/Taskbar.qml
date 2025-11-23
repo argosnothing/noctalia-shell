@@ -130,39 +130,30 @@ Rectangle {
       return;
     }
 
-    var visibleItems = [];
-    for (var i = 0; i < taskbarLayout.children.length; i++) {
-      var repeater = taskbarLayout.children[i];
-      if (repeater && repeater.count !== undefined) {
-        for (var j = 0; j < repeater.count; j++) {
-          var item = repeater.itemAt(j);
-          if (item && item.visible) {
-            visibleItems.push({index: j, item: item});
-          }
-        }
-        break;
-      }
-    }
-
-    if (visibleItems.length === 0) {
-      hiddenTitleIndices = {};
-      return;
-    }
-
     var newHidden = {};
-    var currentWidth = taskbarLayout.x + Style.marginM;
+    var totalWindows = CompositorService.windows.count || 0;
+    var testWidth = taskbarLayout.x + Style.marginM;
     
-    for (var k = 0; k < visibleItems.length; k++) {
-      var vItem = visibleItems[k];
-      var itemWidth = vItem.item.shouldShowTitle ? (vItem.item.contentLayout.implicitWidth + Style.marginS * 2) : root.itemSize;
+    for (var i = 0; i < totalWindows; i++) {
+      var w = CompositorService.windows.get(i);
+      if (!w) continue;
       
-      if (currentWidth + itemWidth > collisionBoundary) {
-        for (var m = visibleItems.length - 1; m >= k; m--) {
-          newHidden[visibleItems[m].index] = true;
-        }
-        break;
+      var passOutput = (!onlySameOutput) || (w.output == screen.name);
+      var passWorkspace = (!onlyActiveWorkspaces) || (CompositorService.getActiveWorkspaces().map(function (ws) { return ws.id; }).includes(w.workspaceId));
+      
+      if (!passOutput || !passWorkspace) continue;
+      
+      var isHidden = newHidden[i] === true;
+      var itemWidth = (!isHidden) ? 200 : root.itemSize;
+      
+      if (testWidth + itemWidth > collisionBoundary) {
+        newHidden[i] = true;
+        testWidth += root.itemSize;
+      } else {
+        testWidth += itemWidth;
       }
-      currentWidth += itemWidth + taskbarLayout.spacing;
+      
+      testWidth += taskbarLayout.spacing;
     }
 
     hiddenTitleIndices = newHidden;
@@ -172,25 +163,32 @@ Rectangle {
     target: CompositorService
     function onWindowListChanged() {
       updateHasWindow();
-      Qt.callLater(checkCollision);
+      checkCollision();
     }
     function onWorkspaceChanged() {
       updateHasWindow();
-      Qt.callLater(checkCollision);
+      checkCollision();
     }
+  }
+
+  Timer {
+    interval: 100
+    running: showTitles && !isVerticalBar && section === "left"
+    repeat: true
+    onTriggered: checkCollision()
   }
 
   Component.onCompleted: {
     updateHasWindow();
-    Qt.callLater(checkCollision);
+    checkCollision();
   }
   onScreenChanged: {
     updateHasWindow();
-    Qt.callLater(checkCollision);
+    checkCollision();
   }
-  onCenterSectionXChanged: Qt.callLater(checkCollision)
-  onCenterSectionWidthChanged: Qt.callLater(checkCollision)
-  onRightSectionXChanged: Qt.callLater(checkCollision)
+  onCenterSectionXChanged: checkCollision()
+  onCenterSectionWidthChanged: checkCollision()
+  onRightSectionXChanged: checkCollision()
 
   // "visible": Always Visible, "hidden": Hide When Empty, "transparent": Transparent When Empty
   visible: hideMode !== "hidden" || hasWindow
@@ -242,8 +240,6 @@ Rectangle {
             easing.type: Easing.OutCubic
           }
         }
-
-        onWidthChanged: Qt.callLater(root.checkCollision)
 
         RowLayout {
           id: contentLayout
