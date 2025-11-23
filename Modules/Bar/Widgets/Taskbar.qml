@@ -132,21 +132,18 @@ Rectangle {
     }
   }
 
-  implicitWidth: visible ? (isVerticalBar ? Style.capsuleHeight : Math.round(taskbarLayout.implicitWidth + Style.marginM * 2)) : 0
-  implicitHeight: visible ? (isVerticalBar ? Math.round(taskbarLayout.implicitHeight + Style.marginM * 2) : Style.capsuleHeight) : 0
+  implicitWidth: visible ? (isVerticalBar ? Style.capsuleHeight : Math.round((showTitles ? taskbarLayout.implicitWidth : taskbarLayoutGrid.implicitWidth) + Style.marginM * 2)) : 0
+  implicitHeight: visible ? (isVerticalBar ? Math.round((showTitles ? taskbarLayout.implicitHeight : taskbarLayoutGrid.implicitHeight) + Style.marginM * 2) : Style.capsuleHeight) : 0
   radius: showTitles ? 0 : Style.radiusM
   color: showTitles ? Color.transparent : Style.capsuleColor
 
   Flow {
     id: taskbarLayout
     visible: showTitles
-    anchors.fill: parent
-    anchors {
-      leftMargin: isVerticalBar ? undefined : Style.marginM
-      rightMargin: isVerticalBar ? undefined : Style.marginM
-      topMargin: (density === "compact") ? 0 : isVerticalBar ? Style.marginM : undefined
-      bottomMargin: (density === "compact") ? 0 : isVerticalBar ? Style.marginM : undefined
-    }
+    x: isVerticalBar ? 0 : Style.marginM
+    y: (density === "compact") ? 0 : isVerticalBar ? Style.marginM : 0
+    width: parent.width - (isVerticalBar ? 0 : Style.marginM * 2)
+    height: parent.height - ((density === "compact") ? 0 : isVerticalBar ? Style.marginM * 2 : 0)
 
     spacing: Style.marginXXS
     flow: isVerticalBar ? Flow.TopToBottom : Flow.LeftToRight
