@@ -44,7 +44,7 @@ Rectangle {
   property real centerSectionX: 0
   property real centerSectionWidth: 0
   property real rightSectionX: 0
-  property int maxVisibleTitles: 999
+  property var hiddenTitleIndices: ({})
 
   // Context menu state
   property var selectedWindow: null
@@ -116,41 +116,56 @@ Rectangle {
 
   function checkCollision() {
     if (!showTitles || isVerticalBar || section !== "left") {
-      maxVisibleTitles = 999;
+      hiddenTitleIndices = {};
       return;
     }
 
-    var taskbarRight = taskbarLayout.x + taskbarLayout.implicitWidth + Style.marginM;
     var collisionBoundary = 0;
-
     if (centerSectionWidth > 0 && centerSectionX > 0) {
       collisionBoundary = centerSectionX - Style.marginS;
     } else if (rightSectionX > 0) {
       collisionBoundary = rightSectionX - Style.marginS;
     } else {
-      maxVisibleTitles = 999;
+      hiddenTitleIndices = {};
       return;
     }
 
-    if (taskbarRight <= collisionBoundary) {
-      maxVisibleTitles = 999;
-      return;
-    }
-
-    var visibleCount = 0;
-    var currentWidth = taskbarLayout.x + Style.marginM;
+    var visibleItems = [];
     for (var i = 0; i < taskbarLayout.children.length; i++) {
-      var item = taskbarLayout.children[i];
-      if (item && item.visible) {
-        currentWidth += item.width + taskbarLayout.spacing;
-        if (currentWidth > collisionBoundary) {
-          break;
+      var repeater = taskbarLayout.children[i];
+      if (repeater && repeater.count !== undefined) {
+        for (var j = 0; j < repeater.count; j++) {
+          var item = repeater.itemAt(j);
+          if (item && item.visible) {
+            visibleItems.push({index: j, item: item});
+          }
         }
-        visibleCount++;
+        break;
       }
     }
 
-    maxVisibleTitles = Math.max(0, visibleCount);
+    if (visibleItems.length === 0) {
+      hiddenTitleIndices = {};
+      return;
+    }
+
+    var newHidden = {};
+    var currentWidth = taskbarLayout.x + Style.marginM;
+    
+    for (var k = 0; k < visibleItems.length; k++) {
+      var vItem = visibleItems[k];
+      var itemWidth = vItem.item.shouldShowTitle ? (vItem.item.contentLayout.implicitWidth + Style.marginS * 2) : root.itemSize;
+      
+      if (currentWidth + itemWidth > collisionBoundary) {
+        for (var m = visibleItems.length - 1; m >= k; m--) {
+          newHidden[visibleItems[m].index] = true;
+        }
+        break;
+      }
+      currentWidth += itemWidth + taskbarLayout.spacing;
+    }
+
+    hiddenTitleIndices = newHidden;
   }
 
   Connections {
@@ -209,7 +224,7 @@ Rectangle {
         required property var modelData
         required property int index
         property ShellScreen screen: root.screen
-        property bool shouldShowTitle: showTitles && !isVerticalBar && index < maxVisibleTitles
+        property bool shouldShowTitle: showTitles && !isVerticalBar && !root.hiddenTitleIndices[index]
 
         visible: (!onlySameOutput || modelData.output == screen.name) && (!onlyActiveWorkspaces || CompositorService.getActiveWorkspaces().map(function (ws) {
           return ws.id;
