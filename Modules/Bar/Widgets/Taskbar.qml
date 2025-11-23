@@ -132,14 +132,14 @@ Rectangle {
     }
   }
 
-  implicitWidth: visible ? (isVerticalBar ? Style.capsuleHeight : Math.round((showTitles ? taskbarLayout.implicitWidth : taskbarLayoutGrid.implicitWidth) + Style.marginM * 2)) : 0
-  implicitHeight: visible ? (isVerticalBar ? Math.round((showTitles ? taskbarLayout.implicitHeight : taskbarLayoutGrid.implicitHeight) + Style.marginM * 2) : Style.capsuleHeight) : 0
-  radius: showTitles ? 0 : Style.radiusM
-  color: showTitles ? Color.transparent : Style.capsuleColor
+  implicitWidth: visible ? (isVerticalBar ? Style.capsuleHeight : Math.round((showTitles && !isVerticalBar ? taskbarLayout.implicitWidth : taskbarLayoutGrid.implicitWidth) + Style.marginM * 2)) : 0
+  implicitHeight: visible ? (isVerticalBar ? Math.round((showTitles && !isVerticalBar ? taskbarLayout.implicitHeight : taskbarLayoutGrid.implicitHeight) + Style.marginM * 2) : Style.capsuleHeight) : 0
+  radius: showTitles && !isVerticalBar ? 0 : Style.radiusM
+  color: showTitles && !isVerticalBar ? Color.transparent : Style.capsuleColor
 
   Flow {
     id: taskbarLayout
-    visible: showTitles
+    visible: showTitles && !isVerticalBar
     anchors.verticalCenter: parent.verticalCenter
     anchors.left: parent.left
     anchors.leftMargin: isVerticalBar ? 0 : Style.marginM
@@ -258,7 +258,7 @@ Rectangle {
 
   GridLayout {
     id: taskbarLayoutGrid
-    visible: !showTitles
+    visible: !showTitles || isVerticalBar
     anchors.fill: parent
     anchors {
       leftMargin: isVerticalBar ? undefined : Style.marginM
