@@ -289,7 +289,10 @@ Item {
                             "widgetId": modelData.id,
                             "section": "left",
                             "sectionWidgetIndex": index,
-                            "sectionWidgetsCount": Settings.data.bar.widgets.left.length
+                            "sectionWidgetsCount": Settings.data.bar.widgets.left.length,
+                            "centerSectionX": centerSection.x,
+                            "centerSectionWidth": centerSection.width,
+                            "rightSectionX": rightSection.x
                           })
             Layout.alignment: Qt.AlignVCenter
           }

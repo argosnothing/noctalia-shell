@@ -41,6 +41,11 @@ Rectangle {
   readonly property bool onlyActiveWorkspaces: (widgetSettings.onlyActiveWorkspaces !== undefined) ? widgetSettings.onlyActiveWorkspaces : widgetMetadata.onlyActiveWorkspaces
   readonly property bool showTitles: (widgetSettings.showTitles !== undefined) ? widgetSettings.showTitles : widgetMetadata.showTitles
 
+  property real centerSectionX: 0
+  property real centerSectionWidth: 0
+  property real rightSectionX: 0
+  property int maxVisibleTitles: 999
+
   // Context menu state
   property var selectedWindow: null
   property string selectedAppName: ""
@@ -109,18 +114,68 @@ Rectangle {
     }
   }
 
+  function checkCollision() {
+    if (!showTitles || isVerticalBar || section !== "left") {
+      maxVisibleTitles = 999;
+      return;
+    }
+
+    var taskbarRight = taskbarLayout.x + taskbarLayout.implicitWidth + Style.marginM;
+    var collisionBoundary = 0;
+
+    if (centerSectionWidth > 0 && centerSectionX > 0) {
+      collisionBoundary = centerSectionX - Style.marginS;
+    } else if (rightSectionX > 0) {
+      collisionBoundary = rightSectionX - Style.marginS;
+    } else {
+      maxVisibleTitles = 999;
+      return;
+    }
+
+    if (taskbarRight <= collisionBoundary) {
+      maxVisibleTitles = 999;
+      return;
+    }
+
+    var visibleCount = 0;
+    var currentWidth = taskbarLayout.x + Style.marginM;
+    for (var i = 0; i < taskbarLayout.children.length; i++) {
+      var item = taskbarLayout.children[i];
+      if (item && item.visible) {
+        currentWidth += item.width + taskbarLayout.spacing;
+        if (currentWidth > collisionBoundary) {
+          break;
+        }
+        visibleCount++;
+      }
+    }
+
+    maxVisibleTitles = Math.max(0, visibleCount);
+  }
+
   Connections {
     target: CompositorService
     function onWindowListChanged() {
       updateHasWindow();
+      Qt.callLater(checkCollision);
     }
     function onWorkspaceChanged() {
       updateHasWindow();
+      Qt.callLater(checkCollision);
     }
   }
 
-  Component.onCompleted: updateHasWindow()
-  onScreenChanged: updateHasWindow()
+  Component.onCompleted: {
+    updateHasWindow();
+    Qt.callLater(checkCollision);
+  }
+  onScreenChanged: {
+    updateHasWindow();
+    Qt.callLater(checkCollision);
+  }
+  onCenterSectionXChanged: Qt.callLater(checkCollision)
+  onCenterSectionWidthChanged: Qt.callLater(checkCollision)
+  onRightSectionXChanged: Qt.callLater(checkCollision)
 
   // "visible": Always Visible, "hidden": Hide When Empty, "transparent": Transparent When Empty
   visible: hideMode !== "hidden" || hasWindow
@@ -152,13 +207,15 @@ Rectangle {
       delegate: Rectangle {
         id: taskbarItem
         required property var modelData
+        required property int index
         property ShellScreen screen: root.screen
+        property bool shouldShowTitle: showTitles && !isVerticalBar && index < maxVisibleTitles
 
         visible: (!onlySameOutput || modelData.output == screen.name) && (!onlyActiveWorkspaces || CompositorService.getActiveWorkspaces().map(function (ws) {
           return ws.id;
         }).includes(modelData.workspaceId))
 
-        width: showTitles && !isVerticalBar ? contentLayout.implicitWidth + Style.marginS * 2 : root.itemSize
+        width: shouldShowTitle ? contentLayout.implicitWidth + Style.marginS * 2 : root.itemSize
         height: Style.capsuleHeight
 
         radius: Style.radiusM
@@ -170,6 +227,8 @@ Rectangle {
             easing.type: Easing.OutCubic
           }
         }
+
+        onWidthChanged: Qt.callLater(root.checkCollision)
 
         RowLayout {
           id: contentLayout
@@ -199,7 +258,7 @@ Rectangle {
 
           NText {
             id: titleText
-            visible: showTitles && !isVerticalBar
+            visible: taskbarItem.shouldShowTitle
             Layout.fillWidth: true
             text: taskbarItem.modelData.title || taskbarItem.modelData.appId || "Unknown"
             pointSize: Style.fontSizeS
