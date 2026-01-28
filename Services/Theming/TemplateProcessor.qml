@@ -124,8 +124,18 @@ Singleton {
   }
 
   function executePredefinedScheme(schemeData, mode) {
+    const schemeName = Settings.data.colorSchemes.predefinedScheme;
+    const actualSchemePath = ColorSchemeService.resolveSchemePath(schemeName);
+    let actualSchemeDir = "";
+    if (actualSchemePath) {
+      const lastSlash = actualSchemePath.lastIndexOf('/');
+      if (lastSlash !== -1) {
+        actualSchemeDir = actualSchemePath.substring(0, lastSlash);
+      }
+    }
+    
     // 1. Handle terminal themes (runtime generation or pre-rendered file copy)
-    handleTerminalThemes(schemeData, mode);
+    handleTerminalThemes(schemeData, mode, actualSchemeDir);
 
     // 2. Build TOML config for application templates
     const tomlContent = buildPredefinedTemplateConfig(mode);
@@ -157,7 +167,7 @@ Singleton {
     // Run Python template processor with --scheme flag
     // Don't pass --mode so templates get both dark and light colors (e.g., zed.json needs both)
     // Pass --default-mode so "default" in templates resolves to the current theme mode
-    script += `python3 "${templateProcessorScript}" --scheme '${schemeJsonPathEsc}' --config '${configPathEsc}' --default-mode ${mode}\n`;
+    script += `python3 "${templateProcessorScript}" --scheme '${schemeJsonPathEsc}' --config '${configPathEsc}' --default-mode ${mode} --scheme-dir '${actualSchemeDir}'\n`;
 
     // Add user templates if enabled
     script += buildUserTemplateCommandForPredefined(schemeData, mode);
@@ -337,7 +347,7 @@ Singleton {
     return "'" + path.replace(/'/g, "'\\''") + "'";
   }
 
-  function handleTerminalThemes(schemeData, mode) {
+  function handleTerminalThemes(schemeData, mode, actualSchemeDir) {
     const homeDir = Quickshell.env("HOME");
 
     // Check if scheme has terminal section (new format)
@@ -346,7 +356,7 @@ Singleton {
 
     if (hasTerminalSection) {
       // New path: runtime generation from JSON terminal colors
-      handleTerminalThemesGenerate(schemeData, mode, homeDir);
+      handleTerminalThemesGenerate(schemeData, mode, homeDir, actualSchemeDir);
     } else {
       // Old path: copy pre-rendered files (backward compatibility for DLC schemes)
       handleTerminalThemesCopy(mode, homeDir);
@@ -356,7 +366,7 @@ Singleton {
   /**
   * New path: Generate terminal themes at runtime from scheme's terminal section
   */
-  function handleTerminalThemesGenerate(schemeData, mode, homeDir) {
+  function handleTerminalThemesGenerate(schemeData, mode, homeDir, actualSchemeDir) {
     // Build terminal output mapping for enabled terminals
     const terminalOutputs = {};
     TemplateRegistry.terminals.forEach(terminal => {
@@ -390,7 +400,8 @@ Singleton {
 
     // Run Python with terminal generation
     const terminalOutputsJson = JSON.stringify(terminalOutputs).replace(/'/g, "'\\''");
-    script += `python3 "${templateProcessorScript}" --scheme '${schemeJsonPathEsc}' --default-mode ${mode} --terminal-output '${terminalOutputsJson}'; `;
+    const actualSchemeDirEsc = actualSchemeDir.replace(/'/g, "'\\''");
+    script += `python3 "${templateProcessorScript}" --scheme '${schemeJsonPathEsc}' --default-mode ${mode} --terminal-output '${terminalOutputsJson}' --scheme-dir '${actualSchemeDirEsc}'; `;
 
     // Run post-hooks for enabled terminals
     TemplateRegistry.terminals.forEach(terminal => {

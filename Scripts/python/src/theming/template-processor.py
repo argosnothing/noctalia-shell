@@ -149,6 +149,12 @@ Examples:
         help='JSON mapping of terminal IDs to output paths: {"foot": "/path/to/output", ...}'
     )
 
+    parser.add_argument(
+        '--scheme-dir',
+        type=Path,
+        help='Path to scheme directory (for custom template overrides)'
+    )
+
     return parser.parse_args()
 
 
@@ -309,7 +315,8 @@ def main() -> int:
     # Process templates
     if args.render or args.config:
         image_path = str(args.image) if args.image else None
-        renderer = TemplateRenderer(result, default_mode=args.default_mode, image_path=image_path, scheme_type=args.scheme_type)
+        scheme_dir = str(args.scheme_dir) if args.scheme_dir else None
+        renderer = TemplateRenderer(result, default_mode=args.default_mode, image_path=image_path, scheme_type=args.scheme_type, scheme_dir=scheme_dir)
 
         if args.render:
             for render_spec in args.render:
@@ -366,10 +373,25 @@ def main() -> int:
 
             for terminal_id, output_path in terminal_outputs.items():
                 try:
-                    content = generator.generate(terminal_id)
+                    # Check for custom template override
+                    override_path = None
+                    if args.scheme_dir:
+                        output_basename = Path(output_path).name
+                        override_candidate = Path(args.scheme_dir) / terminal_id / output_basename
+                        if override_candidate.exists() and override_candidate.is_file():
+                            override_path = override_candidate
+                    
                     output_file = Path(output_path).expanduser()
                     output_file.parent.mkdir(parents=True, exist_ok=True)
-                    output_file.write_text(content)
+                    
+                    if override_path:
+                        # Use custom override (copy directly)
+                        import shutil
+                        shutil.copy2(override_path, output_file)
+                    else:
+                        # Generate from terminal colors
+                        content = generator.generate(terminal_id)
+                        output_file.write_text(content)
                 except ValueError as e:
                     print(f"Error generating {terminal_id}: {e}", file=sys.stderr)
                 except IOError as e:

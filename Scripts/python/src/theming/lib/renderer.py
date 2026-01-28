@@ -143,12 +143,13 @@ class TemplateRenderer:
     # Regex for expression tags: {{ ... }}
     _EXPR_RE = re.compile(r"\{\{\s*([^}\n]+?)\s*\}\}")
 
-    def __init__(self, theme_data: dict[str, dict[str, str]], verbose: bool = True, default_mode: str = "dark", image_path: Optional[str] = None, scheme_type: str = "content"):
+    def __init__(self, theme_data: dict[str, dict[str, str]], verbose: bool = True, default_mode: str = "dark", image_path: Optional[str] = None, scheme_type: str = "content", scheme_dir: Optional[str] = None):
         self.theme_data = theme_data
         self.verbose = verbose
         self.default_mode = default_mode
         self.image_path = image_path
         self.scheme_type = scheme_type
+        self.scheme_dir = scheme_dir
         self._current_file: Optional[str] = None
         self._error_count = 0
         self._colors_map: Optional[dict[str, dict[str, str]]] = None
@@ -1103,6 +1104,28 @@ class TemplateRenderer:
         """Substitute {{closest_color}} in text."""
         return re.sub(r"\{\{\s*closest_color\s*\}\}", closest_color, text)
 
+    def _get_template_override(self, template_name: str, output_path: str) -> Optional[Path]:
+        """Check if a custom template override exists for the given template.
+        
+        Returns the override file path if it exists, None otherwise.
+        
+        For a template named "kitty" with output "~/.config/kitty/themes/noctalia.conf",
+        checks: {scheme_dir}/kitty/noctalia.conf
+        """
+        if not self.scheme_dir:
+            return None
+        
+        output_basename = Path(output_path).name
+        
+        template_id = template_name.split('_')[0]
+        
+        override_path = Path(self.scheme_dir) / template_id / output_basename
+        
+        if override_path.exists() and override_path.is_file():
+            return override_path
+        
+        return None
+
     def process_config_file(self, config_path: Path):
         """Process Matugen TOML configuration file."""
         if not tomllib:
@@ -1128,7 +1151,23 @@ class TemplateRenderer:
                     print(f"Warning: Template '{name}' missing input_path or output_path", file=sys.stderr)
                     continue
 
-                self.render_file(Path(input_path).expanduser(), Path(output_path).expanduser())
+                # Check for custom template override in scheme directory
+                override_path = self._get_template_override(name, output_path)
+                
+                if override_path:
+                    # Use the override file directly (copy instead of render)
+                    try:
+                        import shutil
+                        output_full_path = Path(output_path).expanduser()
+                        output_full_path.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(override_path, output_full_path)
+                        if self.verbose:
+                            print(f"Using custom template override: {override_path}", file=sys.stderr)
+                    except Exception as e:
+                        print(f"Error copying override template '{name}': {e}", file=sys.stderr)
+                else:
+                    # No override, render normally
+                    self.render_file(Path(input_path).expanduser(), Path(output_path).expanduser())
 
                 # Handle closest_color if configured (matugen-compatible)
                 closest_color_value = ""
