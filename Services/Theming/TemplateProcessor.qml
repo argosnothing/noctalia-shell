@@ -108,7 +108,7 @@
      
         const script = buildGenerationScript(content, wp, mode);
      
-        generateProcess.command = ["sh", "-lc", script];
+        generateProcess.command = ["sh", "-c", script];
         generateProcess.running = true;
       }
      
@@ -168,7 +168,7 @@
         // Add user templates if enabled
         script += buildUserTemplateCommandForPredefined(schemeData, mode);
      
-        generateProcess.command = ["sh", "-lc", script];
+        generateProcess.command = ["sh", "-c", script];
         generateProcess.running = true;
       }
      
@@ -408,7 +408,7 @@
                                              }
                                            });
      
-        copyProcess.command = ["sh", "-lc", script];
+        copyProcess.command = ["sh", "-c", script];
         copyProcess.running = true;
       }
      
@@ -437,7 +437,7 @@
                                            });
      
         if (commands.length > 0) {
-          copyProcess.command = ["sh", "-lc", commands.join('; ')];
+          copyProcess.command = ["sh", "-c", commands.join('; ')];
           copyProcess.running = true;
         }
       }
@@ -598,9 +598,6 @@
         stderr: StdioCollector {
           onStreamFinished: {
             const text = this.text.trim();
-            if (text) {
-              Logger.i("TemplateProcessor", "stderr: " + text);
-            }
             if (text && text.includes("Template error:")) {
               const errorLines = text.split("\n").filter(l => l.includes("Template error:"));
               const errors = errorLines.slice(0, 3).join("\n") + (errorLines.length > 3 ? `\n... (+${errorLines.length - 3} more)` : "");
